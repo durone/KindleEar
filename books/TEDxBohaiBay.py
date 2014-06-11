@@ -6,7 +6,7 @@
 import datetime
 from bs4 import BeautifulSoup
 from lib.urlopener import URLOpener
-from base import BaseFeedBook
+from base import BaseFeedBook,string_of_tag
 
 def getBook():
     return TEDxBohaiBay
@@ -46,9 +46,9 @@ class TEDxBohaiBay(BaseFeedBook):
                 try:
                     content = result.content.decode(self.feed_encoding)
                 except UnicodeDecodeError:
-                    content = AutoDecoder(False).decode(result.content,opener.realurl)
+                    content = AutoDecoder(False).decode(result.content,opener.realurl,result.headers)
             else:
-                content = AutoDecoder(False).decode(result.content,opener.realurl)
+                content = AutoDecoder(False).decode(result.content,opener.realurl,result.headers)
             
             soup = BeautifulSoup(content, 'lxml')
             for article in soup.find_all('div', attrs={'class':'feed_item_question'}):
@@ -72,13 +72,15 @@ class TEDxBohaiBay(BaseFeedBook):
                 if self.oldest_article > 0 and delta.days > self.oldest_article:
                     continue
                 
-                urls.append((feedtitle,title.string,title['href'],None))
+                href = title['href'] if title['href'].startswith('http') else self.urljoin(url,title['href'])
+                
+                urls.append((feedtitle,string_of_tag(title),href,None))
                 
         return urls
     
     def soupbeforeimage(self, soup):
         #去掉第一个图片“旋转圈”
         img = soup.body.find('img',attrs={'src':True})
-        if 'loading' in img['src']:
+        if img and 'loading' in img['src']:
             img.decompose()
         
